@@ -18,5 +18,8 @@
 #define BATTERY_MIN_VOLTAGE   6.0f
 #define BATTERY_MAX_VOLTAGE   8.4f
 
+// ─── Network ──────────────────────────────────────────────────────────────────
+#define WIFI_TIMEOUT_MS     10000
+
 // ─── Timing ───────────────────────────────────────────────────────────────────
 #define READ_INTERVAL_MS 5000
