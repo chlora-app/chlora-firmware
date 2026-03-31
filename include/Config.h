@@ -21,5 +21,10 @@
 // ─── Network ──────────────────────────────────────────────────────────────────
 #define WIFI_TIMEOUT_MS     10000
 
+// ─── NTP ──────────────────────────────────────────────────────────────────────
+#define NTP_SERVER          "pool.ntp.org"
+#define NTP_GMT_OFFSET_SEC  25200   // UTC+7 (WIB — Jakarta)
+#define NTP_DST_OFFSET_SEC  0
+
 // ─── Timing ───────────────────────────────────────────────────────────────────
 #define READ_INTERVAL_MS 5000
