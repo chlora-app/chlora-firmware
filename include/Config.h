@@ -26,5 +26,11 @@
 #define NTP_GMT_OFFSET_SEC  25200   // UTC+7 (WIB — Jakarta)
 #define NTP_DST_OFFSET_SEC  0
 
+// ── MQTT ──────────────────────────────────────────────────────────────────────
+#define MQTT_BROKER_HOST        "103.150.92.246"
+#define MQTT_BROKER_PORT        1883
+#define MQTT_TOPIC_TEMPLATE     "chlora/%s/sensors"   // %s → device_id
+#define MQTT_CONNECT_TIMEOUT_MS 5000
+
 // ─── Timing ───────────────────────────────────────────────────────────────────
 #define READ_INTERVAL_MS 5000
