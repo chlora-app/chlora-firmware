@@ -1,6 +1,7 @@
 #pragma once
 
 // ─── Pin Definitions ──────────────────────────────────────────────────────────
+#define PIN_BATTERY      35
 #define PIN_SOIL_SENSOR  27
 #define PIN_DHT          4
 
