@@ -1,9 +1,14 @@
 #include "BatteryMonitor.h"
 
-// ─── Constructor ──────────────────────────────────────────────────────────────
+constexpr float BATTERY_ADC_REF_VOLTAGE = 3.3f;
 
-BatteryMonitor::BatteryMonitor(uint8_t pin, float r1Kohm, float r2Kohm, float minVoltage, float maxVoltage)
-    : _pin(pin), _dividerRatio(r2Kohm / (r1Kohm + r2Kohm)), _minVoltage(minVoltage), _maxVoltage(maxVoltage) {}
+// ─── Constructor ──────────────────────────────────────────────────────────────
+BatteryMonitor::BatteryMonitor(uint8_t pin, float r1Kohm, float r2Kohm, float minVoltage, float maxVoltage, float calFactor)
+    : _pin(pin),
+      _dividerRatio(r2Kohm / (r1Kohm + r2Kohm)),
+      _minVoltage(minVoltage),
+      _maxVoltage(maxVoltage),
+      _calFactor(calFactor) {}
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 void BatteryMonitor::begin() {
@@ -14,7 +19,8 @@ void BatteryMonitor::begin() {
 
 // ─── Public Readings ──────────────────────────────────────────────────────────
 float BatteryMonitor::getVoltage() const {
-    return calcVoltage(_averagedRead(), _dividerRatio);
+    float v = calcVoltage(_averagedRead(), _dividerRatio, BATTERY_ADC_REF_VOLTAGE);
+    return constrain(v * _calFactor, _minVoltage, _maxVoltage);
 }
 
 float BatteryMonitor::getPercent() const {

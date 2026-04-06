@@ -10,7 +10,9 @@
  */
 class BatteryMonitor {
 public:
-    BatteryMonitor(uint8_t pin, float r1Kohm, float r2Kohm, float minVoltage, float maxVoltage);
+    BatteryMonitor(uint8_t pin, float r1Kohm, float r2Kohm,
+                   float minVoltage, float maxVoltage,
+                   float calFactor = 1.0f);
 
     void  begin();
 
@@ -34,6 +36,7 @@ private:
     float   _dividerRatio;  // R2 / (R1 + R2), pre-calculated in constructor
     float   _minVoltage;
     float   _maxVoltage;
+    float   _calFactor;   // ← tambah member ini
 
     static const uint8_t NUM_SAMPLES = 10;
     int _averagedRead() const;
