@@ -10,7 +10,7 @@
 class TimeManager {
 public:
     // Configures SNTP and waits up to 5 s for the first sync.
-    // Must be called after WiFi is connected.
+    // Must be called after Wi-Fi is connected.
     static void begin(const char* ntpServer, long gmtOffsetSec, int dstOffsetSec);
 
     // Returns true once the system clock has been set by NTP.
