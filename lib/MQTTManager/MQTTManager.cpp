@@ -1,5 +1,6 @@
 #include "MQTTManager.h"
 #include "WiFiConnector.h"
+#include "Config.h"
 
 // ── Static member definitions ──────────────────────────────────────────────────
 WiFiClient   MQTTManager::_wifiClient;
@@ -9,6 +10,9 @@ uint16_t     MQTTManager::_port     = 1883;
 const char*  MQTTManager::_clientId = nullptr;
 
 // ──────────────────────────────────────────────────────────────────────────────
+
+constexpr int MQTT_PUBLISH_RETRIES = 3;
+constexpr int MQTT_PUBLISH_RETRY_DELAY_MS = 500;
 
 void MQTTManager::begin(const char* broker, uint16_t port, const char* clientId) {
     _broker   = broker;
@@ -90,17 +94,36 @@ bool MQTTManager::publish(const char* topic, const char* payload, bool retain) {
         return false;
     }
 
-    const bool ok = _mqttClient.publish(topic, payload, retain);
+    bool ok = false;
 
-    if (ok) {
-        Serial.printf("[MQTTManager] Published → topic: \"%s\" | %u bytes\n", topic, strlen(payload));
-    } else {
-        Serial.printf("[MQTTManager] ERROR: Publish failed — topic: \"%s\" "
-                      "(cek ukuran payload vs. buffer)\n", topic);
+    for (uint8_t attempt = 1; attempt <= MQTT_PUBLISH_RETRIES; attempt++) {
+        ok = _mqttClient.publish(topic, payload, retain);
+
+        if (ok) {
+            Serial.printf("[MQTTManager] Published → topic: \"%s\" | %u bytes"
+                          " (attempt %u/%u)\n",
+                          topic,
+                          strlen(payload),
+                          attempt,
+                          MQTT_PUBLISH_RETRIES);
+            return true;
+        }
+
+        Serial.printf("[MQTTManager] WARN: Publish failed — attempt %u/%u, "
+                      "retrying in %u ms...\n",
+                      attempt, MQTT_PUBLISH_RETRIES, MQTT_PUBLISH_RETRY_DELAY_MS);
+
+        delay(MQTT_PUBLISH_RETRY_DELAY_MS);
+
+        // Pompa state machine agar koneksi tetap hidup antar retry.
+        _mqttClient.loop();
     }
 
-    return ok;
+    Serial.printf("[MQTTManager] ERROR: Publish failed after %u attempts — "
+                  "topic: \"%s\"\n", MQTT_PUBLISH_RETRIES, topic);
+    return false;
 }
+
 
 void MQTTManager::disconnect() {
     if (isConnected()) {
