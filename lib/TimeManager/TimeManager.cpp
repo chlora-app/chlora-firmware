@@ -1,30 +1,57 @@
 #include "TimeManager.h"
+#include "Config.h"
+#include <esp_sntp.h>
+
+// ─── Debug logging macros (mirrors main.cpp) ──────────────────────────────────
+#ifndef DEBUG_MODE
+  #define DEBUG_MODE 0
+#endif
+
+#if DEBUG_MODE
+  #define LOG_I(fmt, ...) Serial.printf(fmt, ##__VA_ARGS__)
+  #define LOG_W(fmt, ...) Serial.printf(fmt, ##__VA_ARGS__)
+#else
+  #define LOG_I(fmt, ...) do {} while(0)
+  #define LOG_W(fmt, ...) do {} while(0)
+#endif
+
+// ─── Static member definition ─────────────────────────────────────────────────
+bool TimeManager::_syncedThisSession = false;
 
 void TimeManager::begin(const char* ntpServer, long gmtOffsetSec, int dstOffsetSec) {
-    configTime(gmtOffsetSec, dstOffsetSec, ntpServer);
-    Serial.printf("[TimeManager] NTP server: %s | UTC offset: %+.1f h\n", ntpServer, gmtOffsetSec / 3600.0f);
+    _syncedThisSession = false;
 
-    Serial.print("[TimeManager] Waiting for sync...");
-    const uint32_t deadline = millis() + 5000;
-    while (!isTimeSynced() && millis() < deadline) {
+    configTime(gmtOffsetSec, dstOffsetSec, ntpServer, "time.google.com", "time.cloudflare.com");
+
+    LOG_I("[TimeManager] NTP servers: %s, time.google.com, time.cloudflare.com | UTC offset: %+.1f h\n",
+          ntpServer, gmtOffsetSec / 3600.0f);
+    LOG_I("[TimeManager] Waiting for sync...");
+
+    const uint32_t deadline = millis() + 10000;
+    while (millis() < deadline) {
         delay(200);
-        Serial.print(".");
-    }
-    Serial.println();
+        LOG_I(".");
 
-    if (isTimeSynced()) {
+        if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED
+                && time(nullptr) > 1700000000UL) {
+            _syncedThisSession = true;
+            break;
+        }
+    }
+    LOG_I("\n");
+
+    if (_syncedThisSession) {
         char buf[32];
         const time_t now = time(nullptr);
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", localtime(&now));
-        Serial.printf("[TimeManager] Synced — local time: %s\n", buf);
+        LOG_I("[TimeManager] Synced — local time: %s\n", buf);
     } else {
-        Serial.println("[TimeManager] WARNING: Initial sync timed out — timestamp will be 0.");
+        LOG_W("[TimeManager] WARNING: NTP sync timed out — timestamp will use RTC fallback.\n");
     }
 }
 
 bool TimeManager::isTimeSynced() {
-    // Any epoch value past year 2001 is considered valid
-    return time(nullptr) > 1000000000UL;
+    return _syncedThisSession;
 }
 
 uint64_t TimeManager::getTimestampMs() {
@@ -37,11 +64,11 @@ uint64_t TimeManager::getTimestampMs() {
 
 void TimeManager::printStatus() {
     if (!isTimeSynced()) {
-        Serial.println("[TimeManager] Clock not synchronized.");
+        LOG_W("[TimeManager] Clock not synchronized in this session.\n");
         return;
     }
     char buf[32];
     const time_t now = time(nullptr);
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", localtime(&now));
-    Serial.printf("[TimeManager] %s | %llu ms\n", buf, getTimestampMs());
+    LOG_I("[TimeManager] %s | %llu ms\n", buf, getTimestampMs());
 }
