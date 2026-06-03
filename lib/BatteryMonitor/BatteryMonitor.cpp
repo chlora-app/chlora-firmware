@@ -19,7 +19,7 @@ void BatteryMonitor::begin() {
 
 // ─── Public Readings ──────────────────────────────────────────────────────────
 float BatteryMonitor::getVoltage() const {
-    float v = calcVoltage(_averagedRead(), _dividerRatio, BATTERY_ADC_REF_VOLTAGE);
+    float v = calcVoltage(_filteredRead(), _dividerRatio, BATTERY_ADC_REF_VOLTAGE);
     return constrain(v * _calFactor, _minVoltage, _maxVoltage);
 }
 
@@ -51,11 +51,29 @@ float BatteryMonitor::calcPercent(float voltage, float minVoltage, float maxVolt
 }
 
 // ─── Private Helpers ──────────────────────────────────────────────────────────
-int BatteryMonitor::_averagedRead() const {
-    long sum = 0;
+/**
+ * Reads the ADC pin NUM_SAMPLES times and returns the MEDIAN value.
+ * Median rejects ESP32 ADC outlier spikes (occasional 0 or 4095) that would
+ * skew a simple mean. See SoilSensor::_filteredRead() for full rationale.
+ */
+int BatteryMonitor::_filteredRead() const {
+    int samples[NUM_SAMPLES];
+
     for (uint8_t i = 0; i < NUM_SAMPLES; i++) {
-        sum += analogRead(_pin);
-        delay(5);
+        samples[i] = analogRead(_pin);
+        delayMicroseconds(200);
     }
-    return static_cast<int>(sum / NUM_SAMPLES);
+
+    // Insertion sort (N=11, O(N²) is fine and avoids pulling in <algorithm>).
+    for (uint8_t i = 1; i < NUM_SAMPLES; i++) {
+        const int key = samples[i];
+        int j = i - 1;
+        while (j >= 0 && samples[j] > key) {
+            samples[j + 1] = samples[j];
+            j--;
+        }
+        samples[j + 1] = key;
+    }
+
+    return samples[NUM_SAMPLES / 2];
 }
